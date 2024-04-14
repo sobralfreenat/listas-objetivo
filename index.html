@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Objetivo Principal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .key-results-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .key-result-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .button-container1 {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .button-container2 {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .key-result-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+        .key-result-button:hover {
+            opacity: 0.8;
+        }
+        #saveKeyResultButton {
+            background-color: #0CAF50;
+            color: white;
+        }
+        #deleteAllButton {
+            background-color: #f44336;
+            color: white;
+        }
+        #saveStateButton {
+            background-color: #2196F3;
+            color: white;
+        }
+        #loadStateButton {
+            background-color: #ff8ada;
+            color: white;
+        }
+        .key-results-display {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+        }
+        .key-result-item {
+            margin-bottom: 10px;
+        }
+        .key-result-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .key-result-item .delete-button {
+            color: red;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .metrics-container {
+            margin-top: 40px;
+        }
+        .metrics-container h2 {
+            margin-bottom: 10px;
+        }
+        .metric-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .metric-item span {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Objetivo Principal</h1>
+    <div class="key-results-container">
+        <input type="text" id="keyResultInput" class="key-result-input" placeholder="Digite o resultado chave">
+        <div class="button-container1">
+            <button id="saveKeyResultButton" class="key-result-button">Incluir Item</button>
+            <button id="deleteAllButton" class="key-result-button">Excluir Tudo</button>
+        </div>
+        <div id="keyResultsDisplay" class="key-results-display"></div>
+        <div class="button-container2">
+            <button id="saveStateButton" class="key-result-button">Salvar Estado</button>
+            <button id="loadStateButton" class="key-result-button">Carregar Estado</button>
+        </div>
+    </div>
+
+    <div class="metrics-container">
+        <h2>Métricas</h2>
+        <div id="metricsDisplay"></div>
+    </div>
+
+    <script>
+        const keyResultInput = document.getElementById('keyResultInput');
+        const saveKeyResultButton = document.getElementById('saveKeyResultButton');
+        const deleteAllButton = document.getElementById('deleteAllButton');
+        const saveStateButton = document.getElementById('saveStateButton');
+        const loadStateButton = document.getElementById('loadStateButton');
+        const keyResultsDisplay = document.getElementById('keyResultsDisplay');
+
+        saveKeyResultButton.addEventListener('click', saveKeyResult);
+        deleteAllButton.addEventListener('click', deleteAllKeyResults);
+        saveStateButton.addEventListener('click', saveState);
+        loadStateButton.addEventListener('click', loadState);
+
+        function saveKeyResult() {
+            const keyResult = keyResultInput.value.trim();
+            if (keyResult !== '') {
+                const keyResults = JSON.parse(localStorage.getItem('keyResults')) || [];
+                keyResults.push({ text: keyResult, completed: false });
+                localStorage.setItem('keyResults', JSON.stringify(keyResults));
+                keyResultInput.value = '';
+                renderKeyResults(keyResults);
+                updateMetrics();
+            }
+        }
+
+        function deleteAllKeyResults() {
+            if (confirm('Tem certeza de que deseja excluir todos os resultados chave?')) {
+                localStorage.removeItem('keyResults');
+                keyResultsDisplay.innerHTML = '';
+                updateMetrics();
+            }
+        }
+
+        function renderKeyResults(keyResults = []) {
+            keyResultsDisplay.innerHTML = '';
+            keyResults.forEach((keyResult, index) => {
+                const keyResultItem = document.createElement('div');
+                keyResultItem.classList.add('key-result-item');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = keyResult.completed;
+                checkbox.addEventListener('change', () => {
+                    keyResult.completed = checkbox.checked;
+                    localStorage.setItem('keyResults', JSON.stringify(keyResults));
+                    updateMetrics();
+                });
+
+                const keyResultText = document.createElement('span');
+                keyResultText.textContent = keyResult.text;
+
+                const deleteButton = document.createElement('span');
+                deleteButton.classList.add('delete-button');
+                deleteButton.textContent = 'Excluir';
+                deleteButton.addEventListener('click', () => {
+                    if (confirm('Tem certeza de que deseja excluir este resultado chave?')) {
+                        keyResults.splice(index, 1);
+                        localStorage.setItem('keyResults', JSON.stringify(keyResults));
+                        renderKeyResults(keyResults);
+                        updateMetrics();
+                    }
+                });
+
+                keyResultItem.appendChild(checkbox);
+                keyResultItem.appendChild(keyResultText);
+                keyResultItem.appendChild(deleteButton);
+                keyResultsDisplay.appendChild(keyResultItem);
+            });
+        }
+
+        function saveState() {
+            const state = {
+                keyResults: JSON.parse(localStorage.getItem('keyResults')) || []
+            };
+            const stateJson = JSON.stringify(state);
+            const blob = new Blob([stateJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Solicitar o nome do arquivo ao usuário
+            const fileName = prompt('Digite o nome do arquivo:', 'objetivo-principal-state.json');
+
+            // Verificar se o usuário forneceu um nome de arquivo válido
+            if (fileName !== null && fileName.trim() !== '') {
+                link.download = fileName.trim();
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        function loadState() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'application/json';
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const stateJson = e.target.result;
+                    const state = JSON.parse(stateJson);
+                    localStorage.setItem('keyResults', JSON.stringify(state.keyResults));
+                    renderKeyResults(state.keyResults);
+                    updateMetrics();
+                };
+                reader.readAsText(file);
+            });
+            fileInput.click();
+        }
+
+        function updateMetrics() {
+            const keyResults = JSON.parse(localStorage.getItem('keyResults')) || [];
+            const totalResults = keyResults.length;
+            const completedResults = keyResults.filter(keyResult => keyResult.completed).length;
+            const completionPercentage = totalResults > 0 ? Math.round((completedResults
+/ totalResults) * 100) : 0;
+
+        const metricsDisplay = document.getElementById('metricsDisplay');
+        metricsDisplay.innerHTML = `
+            <div class="metric-item">
+                <span>Total de Resultados:</span>
+                <span>${totalResults}</span>
+            </div>
+            <div class="metric-item">
+                <span>Resultados Concluídos:</span>
+                <span>${completedResults}</span>
+            </div>
+            <div class="metric-item">
+                <span>Porcentagem de Conclusão:</span>
+                <span>${completionPercentage}%</span>
+            </div>
+        `;
+    }
+
+    // Carregar os resultados chave salvos ao carregar a página
+    const keyResults = JSON.parse(localStorage.getItem('keyResults')) || [];
+    renderKeyResults(keyResults);
+    updateMetrics();
+</script>
+</body>
+</html>
